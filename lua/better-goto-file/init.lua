@@ -9,15 +9,12 @@ local config = {
 
 local function do_match(line, pattern, init)
     local remaining_line = line:sub(init + 1)
-
     local match_start, match_end = string.find(remaining_line, pattern)
 
     if match_start == 1 then
         local value = remaining_line:sub(match_start, match_end)
         return value, init + match_end
     end
-
-    return nil, nil
 end
 
 local function goto_file()
