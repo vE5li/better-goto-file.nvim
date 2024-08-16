@@ -4,7 +4,7 @@ local config = {
     file_pattern = "[a-zA-Z_/~.%-]+",
     number_pattern = "[0-9]+",
     line_pattern = ":",
-    column_pattern = "[:]",
+    column_pattern = ":",
 }
 
 local function do_match(line, pattern, init)
