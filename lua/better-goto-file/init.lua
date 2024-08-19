@@ -27,13 +27,7 @@ local function goto_file()
         )
         [1]
     local cursor_column = position[2] + 1
-
-    local information = {
-        filename = nil,
-        filename_end = nil,
-        line_number = nil,
-        colulmn = nil,
-    }
+    local information
 
     local start_pos, end_pos = 1, 0
     while true do
@@ -41,38 +35,47 @@ local function goto_file()
 
         if not start_pos then
             P("No filename under cursor")
+            information = { filename = nil };
             break
         end
 
-        if start_pos <= cursor_column and end_pos >= cursor_column then
-            information.filename = line:sub(start_pos, end_pos)
-            information.filename_end = end_pos
+        information = {
+            filename = line:sub(start_pos, end_pos),
+            filename_end = end_pos - 1,
+            match_start = start_pos,
+            match_end = end_pos,
+            line_number = nil,
+            colulmn = nil,
+        }
 
-            local separator, separator_end = do_match(line, config.line_pattern, end_pos)
-            if separator then
-                local line_number, line_number_end = do_match(line, config.number_pattern, separator_end)
-                if line_number then
-                    information.line_number = tonumber(line_number)
+        local separator, separator_end = do_match(line, config.line_pattern, end_pos)
+        if separator then
+            local line_number, line_number_end = do_match(line, config.number_pattern, separator_end)
 
-                    separator, separator_end = do_match(line, config.column_pattern, line_number_end)
-                    if separator then
-                        local column = do_match(line, config.number_pattern, separator_end)
-                        if column then
-                            information.colulmn = tonumber(column)
-                        end
+            if line_number then
+                information.match_end = line_number_end
+                information.line_number = tonumber(line_number)
+
+                separator, separator_end = do_match(line, config.column_pattern, line_number_end)
+                if separator then
+                    local column, column_end = do_match(line, config.number_pattern, separator_end)
+                    if column then
+                        information.match_end = column_end
+                        information.colulmn = tonumber(column)
                     end
                 end
             end
+        end
 
+        if information.match_start <= cursor_column and information.match_end >= cursor_column then
             break
         end
     end
 
     if information.filename then
-        -- TODO: For when we can also match on the line number
-        -- if cursor_column > information.filename_end then
-        --     vim.api.nvim_win_set_cursor(0, { position[1], information.filename_end })
-        -- end
+        if cursor_column > information.filename_end then
+            vim.api.nvim_win_set_cursor(0, { position[1], information.filename_end })
+        end
 
         vim.cmd("norm! gF")
 
