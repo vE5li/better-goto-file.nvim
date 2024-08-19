@@ -34,7 +34,7 @@ local function goto_file()
         start_pos, end_pos = string.find(line, config.file_pattern, end_pos + 1)
 
         if not start_pos or start_pos > cursor_column then
-            P("No filename under cursor")
+            print("No filename under cursor")
             information = { filename = nil };
             break
         end
