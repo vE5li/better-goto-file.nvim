@@ -7,7 +7,7 @@ local config = {
     column_pattern = ":",
 }
 
-local function do_match(line, pattern, init)
+local function try_pattern(line, pattern, init)
     local remaining_line = line:sub(init + 1)
     local match_start, match_end = string.find(remaining_line, pattern)
 
@@ -48,17 +48,17 @@ local function goto_file()
             colulmn = nil,
         }
 
-        local separator, separator_end = do_match(line, config.line_pattern, end_pos)
+        local separator, separator_end = try_pattern(line, config.line_pattern, end_pos)
         if separator then
-            local line_number, line_number_end = do_match(line, config.number_pattern, separator_end)
+            local line_number, line_number_end = try_pattern(line, config.number_pattern, separator_end)
 
             if line_number then
                 information.match_end = line_number_end
                 information.line_number = tonumber(line_number)
 
-                separator, separator_end = do_match(line, config.column_pattern, line_number_end)
+                separator, separator_end = try_pattern(line, config.column_pattern, line_number_end)
                 if separator then
-                    local column, column_end = do_match(line, config.number_pattern, separator_end)
+                    local column, column_end = try_pattern(line, config.number_pattern, separator_end)
                     if column then
                         information.match_end = column_end
                         information.colulmn = tonumber(column)
