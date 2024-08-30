@@ -6,14 +6,14 @@ local default_config = {
     number_pattern = "[0-9]+",
 }
 
----@class better-goto-file.GotoFileOptions
+---@class better-goto-file.Options
 ---@field file_pattern? string Pattern to match the file name
 ---@field line_pattern? string Pattern to match the line number separator
 ---@field column_pattern? string Pattern to match the column separator
 ---@field number_pattern? string Pattern to match the line number and column
 
 ---Go to file, line, and column under the cursor
----@param opts? better-goto-file.GotoFileOptions
+---@param opts? better-goto-file.Options
 M.goto_file = function(opts)
     opts = opts or {}
     local config = vim.tbl_deep_extend("keep", opts, default_config)
@@ -101,7 +101,7 @@ M.goto_file = function(opts)
     end
 end
 
----@param opts? better-goto-file.GotoFileOptions
+---@param opts? better-goto-file.Options
 M.setup = function(opts)
     vim.api.nvim_create_user_command("GotoFile", function() M.goto_file(opts) end,
         { desc = "Goto file under cursor", force = false })
