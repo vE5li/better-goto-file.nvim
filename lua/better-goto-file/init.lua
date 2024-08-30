@@ -4,6 +4,7 @@ local default_config = {
     line_pattern = ":",
     column_pattern = ":",
     number_pattern = "[0-9]+",
+    message_on_error = true,
 }
 
 ---@class better-goto-file.Options
@@ -11,6 +12,7 @@ local default_config = {
 ---@field line_pattern? string Pattern to match the line number separator
 ---@field column_pattern? string Pattern to match the column separator
 ---@field number_pattern? string Pattern to match the line number and column
+---@field message_on_error? boolean Whether or not to print an error message if the goto file command fails
 
 ---Go to file, line, and column under the cursor
 ---@param opts? better-goto-file.Options
@@ -89,9 +91,13 @@ M.goto_file = function(opts)
             vim.api.nvim_win_set_cursor(0, { position[1], information.filename_end })
         end
 
-        vim.cmd("norm! gF")
+        local file_changed = pcall(vim.cmd, "norm! gF")
 
-        if information.line_number then
+        if not file_changed and config.message_on_error then
+            print("Failed to go to file")
+        end
+
+        if file_changed and information.line_number then
             if information.colulmn then
                 vim.api.nvim_win_set_cursor(0, { information.line_number, information.colulmn - 1 })
             else
