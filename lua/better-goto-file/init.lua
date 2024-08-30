@@ -1,23 +1,23 @@
 local M = {}
-
-local config = {
+local default_config = {
     file_pattern = "[a-zA-Z_/~.%-]+",
-    number_pattern = "[0-9]+",
     line_pattern = ":",
     column_pattern = ":",
+    number_pattern = "[0-9]+",
 }
 
-local function try_pattern(line, pattern, init)
-    local remaining_line = line:sub(init + 1)
-    local match_start, match_end = string.find(remaining_line, pattern)
+---@class better-goto-file.GotoFileOptions
+---@field file_pattern? string Pattern to match the file name
+---@field line_pattern? string Pattern to match the line number separator
+---@field column_pattern? string Pattern to match the column separator
+---@field number_pattern? string Pattern to match the line number and column
 
-    if match_start == 1 then
-        local value = remaining_line:sub(match_start, match_end)
-        return value, init + match_end
-    end
-end
+---Go to file, line, and column under the cursor
+---@param opts? better-goto-file.GotoFileOptions
+M.goto_file = function(opts)
+    opts = opts or {}
+    local config = vim.tbl_deep_extend("keep", opts, default_config)
 
-local function goto_file()
     local position = vim.api.nvim_win_get_cursor(0)
     local line = vim.api.nvim_buf_get_lines(
             0,
@@ -29,7 +29,9 @@ local function goto_file()
     local cursor_column = position[2] + 1
     local information
 
+    ---@type integer|nil, integer|nil
     local start_pos, end_pos = 1, 0
+
     while true do
         start_pos, end_pos = string.find(line, config.file_pattern, end_pos + 1)
 
@@ -48,17 +50,27 @@ local function goto_file()
             colulmn = nil,
         }
 
-        local separator, separator_end = try_pattern(line, config.line_pattern, end_pos)
+        local function try_pattern(pattern, init)
+            local remaining_line = line:sub(init + 1)
+            local match_start, match_end = string.find(remaining_line, pattern)
+
+            if match_start == 1 then
+                local value = remaining_line:sub(match_start, match_end)
+                return value, init + match_end
+            end
+        end
+
+        local separator, separator_end = try_pattern(config.line_pattern, end_pos)
         if separator then
-            local line_number, line_number_end = try_pattern(line, config.number_pattern, separator_end)
+            local line_number, line_number_end = try_pattern(config.number_pattern, separator_end)
 
             if line_number then
                 information.match_end = line_number_end
                 information.line_number = tonumber(line_number)
 
-                separator, separator_end = try_pattern(line, config.column_pattern, line_number_end)
+                separator, separator_end = try_pattern(config.column_pattern, line_number_end)
                 if separator then
-                    local column, column_end = try_pattern(line, config.number_pattern, separator_end)
+                    local column, column_end = try_pattern(config.number_pattern, separator_end)
                     if column then
                         information.match_end = column_end
                         information.colulmn = tonumber(column)
@@ -89,8 +101,9 @@ local function goto_file()
     end
 end
 
-M.setup = function( --[[ config ]])
-    vim.api.nvim_create_user_command("GotoFile", goto_file,
+---@param opts? better-goto-file.GotoFileOptions
+M.setup = function(opts)
+    vim.api.nvim_create_user_command("GotoFile", function() M.goto_file(opts) end,
         { desc = "Goto file under cursor", force = false })
 end
 
