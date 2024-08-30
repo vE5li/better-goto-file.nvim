@@ -14,11 +14,14 @@ local default_config = {
 ---@field number_pattern? string Pattern to match the line number and column
 ---@field message_on_error? boolean Whether or not to print an error message if the goto file command fails
 
+---@type better-goto-file.Options
+M.opts = default_config
+
 ---Go to file, line, and column under the cursor
 ---@param opts? better-goto-file.Options
 M.goto_file = function(opts)
     opts = opts or {}
-    local config = vim.tbl_deep_extend("keep", opts, default_config)
+    local config = vim.tbl_deep_extend("keep", opts, M.opts)
 
     local position = vim.api.nvim_win_get_cursor(0)
     local line = vim.api.nvim_buf_get_lines(
@@ -109,7 +112,10 @@ end
 
 ---@param opts? better-goto-file.Options
 M.setup = function(opts)
-    vim.api.nvim_create_user_command("GotoFile", function() M.goto_file(opts) end,
+    opts = opts or {}
+    M.opts = vim.tbl_deep_extend("keep", opts, default_config)
+
+    vim.api.nvim_create_user_command("GotoFile", M.goto_file,
         { desc = "Goto file under cursor", force = false })
 end
 
