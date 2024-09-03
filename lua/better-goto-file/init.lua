@@ -32,7 +32,7 @@ M.goto_file = function(opts)
         )
         [1]
     local cursor_column = position[2] + 1
-    local information
+    local match
 
     ---@type integer|nil, integer|nil
     local start_pos, end_pos = 1, 0
@@ -42,11 +42,11 @@ M.goto_file = function(opts)
 
         if not start_pos or start_pos > cursor_column then
             print("No filename under cursor")
-            information = { filename = nil };
+            match = { filename = nil };
             break
         end
 
-        information = {
+        match = {
             filename = line:sub(start_pos, end_pos),
             filename_end = end_pos - 1,
             match_start = start_pos,
@@ -55,43 +55,43 @@ M.goto_file = function(opts)
             colulmn = nil,
         }
 
-        local function try_pattern(pattern, init)
-            local remaining_line = line:sub(init + 1)
+        local function match_next(pattern)
+            local remaining_line = line:sub(end_pos + 1)
             local match_start, match_end = string.find(remaining_line, pattern)
 
             if match_start == 1 then
                 local value = remaining_line:sub(match_start, match_end)
-                return value, init + match_end
+                end_pos = end_pos + match_end
+                return value
             end
         end
 
-        local separator, separator_end = try_pattern(config.line_pattern, end_pos)
-        if separator then
-            local line_number, line_number_end = try_pattern(config.number_pattern, separator_end)
+        if match_next(config.line_pattern) then
+            local line_number = match_next(config.number_pattern)
 
             if line_number then
-                information.match_end = line_number_end
-                information.line_number = tonumber(line_number)
+                match.match_end = end_pos
+                match.line_number = tonumber(line_number)
 
-                separator, separator_end = try_pattern(config.column_pattern, line_number_end)
-                if separator then
-                    local column, column_end = try_pattern(config.number_pattern, separator_end)
+                if match_next(config.column_pattern) then
+                    local column = match_next(config.number_pattern)
+
                     if column then
-                        information.match_end = column_end
-                        information.colulmn = tonumber(column)
+                        match.match_end = end_pos
+                        match.colulmn = tonumber(column)
                     end
                 end
             end
         end
 
-        if information.match_start <= cursor_column and information.match_end >= cursor_column then
+        if match.match_start <= cursor_column and match.match_end >= cursor_column then
             break
         end
     end
 
-    if information.filename then
-        if cursor_column > information.filename_end then
-            vim.api.nvim_win_set_cursor(0, { position[1], information.filename_end })
+    if match.filename then
+        if cursor_column > match.filename_end then
+            vim.api.nvim_win_set_cursor(0, { position[1], match.filename_end })
         end
 
         local file_changed = pcall(vim.cmd, "norm! gF")
@@ -100,8 +100,8 @@ M.goto_file = function(opts)
             print("Failed to go to file")
         end
 
-        if file_changed and information.line_number then
-            pcall(vim.api.nvim_win_set_cursor, 0, { information.line_number, information.colulmn or 0 })
+        if file_changed and match.line_number then
+            pcall(vim.api.nvim_win_set_cursor, 0, { match.line_number, match.colulmn or 0 })
         end
     end
 end
