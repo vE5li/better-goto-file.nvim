@@ -101,11 +101,7 @@ M.goto_file = function(opts)
         end
 
         if file_changed and information.line_number then
-            if information.colulmn then
-                pcall(vim.api.nvim_win_set_cursor, 0, { information.line_number, information.colulmn - 1 })
-            else
-                pcall(vim.api.nvim_win_set_cursor, 0, { information.line_number, 0 })
-            end
+            pcall(vim.api.nvim_win_set_cursor, 0, { information.line_number, information.colulmn or 0 })
         end
     end
 end
