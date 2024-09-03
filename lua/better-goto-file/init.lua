@@ -23,15 +23,27 @@ M.goto_file = function(opts)
     opts = opts or {}
     local config = vim.tbl_deep_extend("keep", opts, M.opts)
 
-    local position = vim.api.nvim_win_get_cursor(0)
-    local line = vim.api.nvim_buf_get_lines(
-            0,
-            position[1] - 1,
-            position[1],
-            false
-        )
-        [1]
-    local cursor_column = position[2] + 1
+    -- Get the cursor position
+    local cursor_line, cursor_column = unpack(vim.api.nvim_win_get_cursor(0))
+    cursor_column = cursor_column + 1
+
+    -- Get the line under the cursor
+    local line = unpack(vim.api.nvim_buf_get_lines(
+        0,
+        cursor_line - 1,
+        cursor_line,
+        false
+    ))
+
+    ---@class better-goto-file.Match
+    ---@field filename string Filename under the cursor
+    ---@field filename_end integer Last column of filename
+    ---@field match_start integer First column of the match
+    ---@field match_end integer Last column of the match
+    ---@field line_number? integer Optional line number after the filename
+    ---@field column? integer Optional column after the filename
+
+    ---@type better-goto-file.Match|nil
     local match
 
     ---@type integer|nil, integer|nil
@@ -40,9 +52,13 @@ M.goto_file = function(opts)
     while true do
         start_pos, end_pos = string.find(line, config.file_pattern, end_pos + 1)
 
-        if not start_pos or start_pos > cursor_column then
-            print("No filename under cursor")
-            match = { filename = nil };
+        if not start_pos or not end_pos or start_pos > cursor_column then
+            match = nil
+
+            if config.message_on_error then
+                print("No filename under cursor")
+            end
+
             break
         end
 
@@ -51,10 +67,11 @@ M.goto_file = function(opts)
             filename_end = end_pos - 1,
             match_start = start_pos,
             match_end = end_pos,
-            line_number = nil,
-            colulmn = nil,
         }
 
+        ---Attempt to match the next pattern, advancing `end_pos` on success
+        ---@param pattern string Pattern to match
+        ---@return string|nil text Matched text
         local function match_next(pattern)
             local remaining_line = line:sub(end_pos + 1)
             local match_start, match_end = string.find(remaining_line, pattern)
@@ -66,6 +83,7 @@ M.goto_file = function(opts)
             end
         end
 
+        -- Try to match line number and column
         if match_next(config.line_pattern) then
             local line_number = match_next(config.number_pattern)
 
@@ -78,20 +96,21 @@ M.goto_file = function(opts)
 
                     if column then
                         match.match_end = end_pos
-                        match.colulmn = tonumber(column)
+                        match.column = tonumber(column)
                     end
                 end
             end
         end
 
         if match.match_start <= cursor_column and match.match_end >= cursor_column then
+            -- Match found below cursor
             break
         end
     end
 
-    if match.filename then
+    if match then
         if cursor_column > match.filename_end then
-            vim.api.nvim_win_set_cursor(0, { position[1], match.filename_end })
+            vim.api.nvim_win_set_cursor(0, { cursor_line, match.filename_end })
         end
 
         local file_changed = pcall(vim.cmd, "norm! gF")
@@ -101,7 +120,7 @@ M.goto_file = function(opts)
         end
 
         if file_changed and match.line_number then
-            pcall(vim.api.nvim_win_set_cursor, 0, { match.line_number, match.colulmn or 0 })
+            pcall(vim.api.nvim_win_set_cursor, 0, { match.line_number, match.column or 0 })
         end
     end
 end
