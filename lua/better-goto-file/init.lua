@@ -110,6 +110,15 @@ M.goto_file = function(opts)
 
     if match then
         if cursor_column > match.filename_end then
+            -- If the cursor is not directly on the filename, Neovims builtin `gF` doesn't execute the jump.
+            -- So we move the cursor over the filename before running goto file.
+            --
+            -- ~/.config/nvim/init.lua:10:5
+            --                          ^ cursor starts here
+            --
+            -- ~/.config/nvim/init.lua:10:5
+            --                       ^ cursor will end up here
+            --
             vim.api.nvim_win_set_cursor(0, { cursor_line, match.filename_end })
         end
 
