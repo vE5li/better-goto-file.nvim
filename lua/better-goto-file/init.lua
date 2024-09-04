@@ -47,12 +47,12 @@ M.goto_file = function(opts)
     local match
 
     ---@type integer|nil, integer|nil
-    local start_pos, end_pos = 1, 0
+    local match_start, match_end = 1, 0
 
     while true do
-        start_pos, end_pos = string.find(line, config.file_pattern, end_pos + 1)
+        match_start, match_end = string.find(line, config.file_pattern, match_end + 1)
 
-        if not start_pos or not end_pos or start_pos > cursor_column then
+        if not match_start or not match_end or match_start > cursor_column then
             match = nil
 
             if config.message_on_error then
@@ -63,22 +63,22 @@ M.goto_file = function(opts)
         end
 
         match = {
-            filename = line:sub(start_pos, end_pos),
-            filename_end = end_pos - 1,
-            match_start = start_pos,
-            match_end = end_pos,
+            filename = line:sub(match_start, match_end),
+            filename_end = match_end - 1,
+            match_start = match_start,
+            match_end = match_end,
         }
 
-        ---Attempt to match the next pattern, advancing `end_pos` on success
+        ---Attempt to match the next pattern, advancing `match_end` on success
         ---@param pattern string Pattern to match
         ---@return string|nil text Matched text
         local function match_next(pattern)
-            local remaining_line = line:sub(end_pos + 1)
-            local match_start, match_end = string.find(remaining_line, pattern)
+            local remaining_line = line:sub(match_end + 1)
+            local pattern_start, pattern_end = string.find(remaining_line, pattern)
 
-            if match_start == 1 then
-                local value = remaining_line:sub(match_start, match_end)
-                end_pos = end_pos + match_end
+            if pattern_start == 1 then
+                local value = remaining_line:sub(pattern_start, pattern_end)
+                match_end = match_end + pattern_end
                 return value
             end
         end
@@ -88,14 +88,14 @@ M.goto_file = function(opts)
             local line_number = match_next(config.number_pattern)
 
             if line_number then
-                match.match_end = end_pos
+                match.match_end = match_end
                 match.line_number = tonumber(line_number)
 
                 if match_next(config.column_pattern) then
                     local column = match_next(config.number_pattern)
 
                     if column then
-                        match.match_end = end_pos
+                        match.match_end = match_end
                         match.column = tonumber(column)
                     end
                 end
