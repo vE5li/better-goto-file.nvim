@@ -1,6 +1,6 @@
 local M = {}
 local default_config = {
-    file_pattern = "[a-zA-Z_/~.%-]+",
+    file_pattern = "[a-zA-Z0-9_/~.%-]+",
     line_pattern = "[: ]",
     column_pattern = "[: ]",
     number_pattern = "[0-9]+",
