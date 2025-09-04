@@ -122,7 +122,13 @@ M.goto_file = function(opts)
             vim.api.nvim_win_set_cursor(0, { cursor_line, match.filename_end })
         end
 
-        local file_changed = pcall(vim.cmd, "norm! gF")
+        local file_changed, error = pcall(vim.cmd, "norm! gF")
+
+        -- It's possible for pcall to return false even though the file was found if an autocmd fails (for
+        -- example if the buffer was unloaded and `BufReadPost` runs into an error). To avoid this edge case
+        -- we also check if the error message contains the error code "E447", associated with a non-existent
+        -- file. If it does not, we can assume that the error was unrelated to the `gF` command.
+        file_changed = file_changed or error:match("E447") == nil
 
         if not file_changed and options.message_on_error then
             print("Failed to go to file")
