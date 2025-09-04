@@ -1,5 +1,5 @@
 local M = {}
-local default_config = {
+local default_options = {
     file_pattern = "[a-zA-Z0-9_/~.%-]+",
     line_pattern = "[: ]",
     column_pattern = "[: ]",
@@ -15,13 +15,13 @@ local default_config = {
 ---@field message_on_error? boolean Whether or not to print an error message if the goto file command fails
 
 ---@type better-goto-file.Options
-M.opts = default_config
+M.opts = default_options
 
 ---Go to file, line, and column under the cursor
 ---@param opts? better-goto-file.Options
 M.goto_file = function(opts)
     opts = opts or {}
-    local config = vim.tbl_deep_extend("keep", opts, M.opts)
+    local options = vim.tbl_deep_extend("keep", opts, M.opts)
 
     -- Get the cursor position
     local cursor_line, cursor_column = unpack(vim.api.nvim_win_get_cursor(0))
@@ -50,12 +50,12 @@ M.goto_file = function(opts)
     local match_start, match_end = 1, 0
 
     while true do
-        match_start, match_end = string.find(line, config.file_pattern, match_end + 1)
+        match_start, match_end = string.find(line, options.file_pattern, match_end + 1)
 
         if not match_start or not match_end or match_start > cursor_column then
             match = nil
 
-            if config.message_on_error then
+            if options.message_on_error then
                 print("No filename under cursor")
             end
 
@@ -84,15 +84,15 @@ M.goto_file = function(opts)
         end
 
         -- Try to match line number and column
-        if match_next(config.line_pattern) then
-            local line_number = match_next(config.number_pattern)
+        if match_next(options.line_pattern) then
+            local line_number = match_next(options.number_pattern)
 
             if line_number then
                 match.match_end = match_end
                 match.line_number = tonumber(line_number)
 
-                if match_next(config.column_pattern) then
-                    local column = match_next(config.number_pattern)
+                if match_next(options.column_pattern) then
+                    local column = match_next(options.number_pattern)
 
                     if column then
                         match.match_end = match_end
@@ -124,7 +124,7 @@ M.goto_file = function(opts)
 
         local file_changed = pcall(vim.cmd, "norm! gF")
 
-        if not file_changed and config.message_on_error then
+        if not file_changed and options.message_on_error then
             print("Failed to go to file")
         end
 
@@ -137,7 +137,7 @@ end
 ---@param opts? better-goto-file.Options
 M.setup = function(opts)
     opts = opts or {}
-    M.opts = vim.tbl_deep_extend("keep", opts, default_config)
+    M.opts = vim.tbl_deep_extend("keep", opts, default_options)
 
     vim.api.nvim_create_user_command("GotoFile", M.goto_file,
         { desc = "Goto file under cursor", force = false })
