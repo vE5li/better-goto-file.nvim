@@ -20,14 +20,20 @@ local default_options = {
 M.opts = default_options
 
 ---@class better-goto-file.Match
----@field filename_end integer Last column of filename
+---@field filename string The filename text
+---@field filename_end integer Last column of filename (0-indexed, for cursor positioning)
 ---@field match_start integer First column of the match
 ---@field match_end integer Last column of the match
 ---@field line_number? integer Optional line number after the filename
 ---@field column? integer Optional column after the filename
 
+---@class better-goto-file.Result
+---@field filename? string The filename extracted from under the cursor, or nil if none was found
+---@field success boolean Whether the jump to the file succeeded
+
 ---Go to file, line, and column under the cursor
 ---@param opts? better-goto-file.Options
+---@return better-goto-file.Result result The extracted filename and whether the jump succeeded
 M.goto_file = function(opts)
     opts = opts or {}
     local options = vim.tbl_deep_extend("keep", opts, M.opts)
@@ -64,6 +70,7 @@ M.goto_file = function(opts)
         end
 
         match = {
+            filename = line:sub(match_start, match_end),
             filename_end = match_end - 1,
             match_start = match_start,
             match_end = match_end,
@@ -138,9 +145,19 @@ M.goto_file = function(opts)
         if file_changed and match.line_number then
             pcall(vim.api.nvim_win_set_cursor, 0, { match.line_number, match.column or 0 })
         end
+
+        return {
+            filename = match.filename,
+            success = file_changed,
+        }
     end
+
+    return { success = false }
 end
 
+---Go to file, line, and column under the cursor in visual mode
+---@param opts? better-goto-file.Options
+---@return better-goto-file.Result result The extracted filename and whether the jump succeeded
 M.goto_file_range = function(opts)
     opts = opts or {}
     local options = vim.tbl_deep_extend("keep", opts, M.opts)
@@ -154,7 +171,7 @@ M.goto_file_range = function(opts)
     local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, end_row, false)
 
     if #lines == 0 then
-        return
+        return { success = false }
     end
 
     local selected_text
@@ -180,12 +197,13 @@ M.goto_file_range = function(opts)
             print("No filename under cursor")
         end
 
-        return
+        return { success = false }
     end
 
     local start_offset = start_column - 1
     ---@type better-goto-file.Match
     local match = {
+        filename = trimmed_text:sub(match_start, match_end),
         filename_end = start_offset + match_end - 1,
         match_start = start_offset + match_start,
         match_end = start_offset + match_end,
@@ -257,6 +275,8 @@ M.goto_file_range = function(opts)
     if file_changed and match.line_number then
         pcall(vim.api.nvim_win_set_cursor, 0, { match.line_number, match.column or 0 })
     end
+
+    return { filename = match.filename, success = file_changed }
 end
 
 ---@param opts? better-goto-file.Options
